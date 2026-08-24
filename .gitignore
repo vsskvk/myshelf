@@ -1,0 +1,12 @@
+# Python virtual environment
+backend/.venv/
+
+# Python temporary files
+__pycache__/
+*.pyc
+
+# SQLite database
+backend/myshelf.db
+
+# Go compilied files
+*.exe

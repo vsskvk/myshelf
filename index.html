@@ -1,0 +1,92 @@
+<link rel="stylesheet" href="styles.css">
+
+<h1>MyShelf</h1>
+
+<p>Моя коллекция фильмов, игр и книг.</p>
+
+<button id="addButton">Добавить</button>
+
+<select id="randomType">
+    <option value="all">Что угодно</option>
+    <option value="game">Игру</option>
+    <option value="movie">Фильм</option>
+    <option value="book">Книгу</option>
+</select>
+
+<select id="randomStatus">
+    <option value="all">Любой статус</option>
+    <option value="planned">В планах</option>
+    <option value="in_progress">В процессе</option>
+    <option value="completed">Завершено</option>
+</select>
+
+<button id="randomButton">Что выбрать сегодня?</button>
+<p id="randomResult"></p>
+
+<div id="addForm" class="add-form">
+    <h2>Добавить в коллекцию</h2>
+
+    <input 
+        id="titleInput"
+        type="text"
+        placeholder="Название"
+    >
+
+    <select id="typeSelect">
+        <option value="game">Игра</option>
+        <option value="movie">Фильм</option>
+        <option value="book">Книга</option>
+    </select>
+
+    <select id="statusSelect">
+        <option value="planned">В планах</option>
+        <option value="in_progress">В процессе</option>
+        <option value="completed">Завершено</option>
+    </select>
+
+    <input
+        id="ratingInput"
+        type="number"
+        min="1"
+        max="10"
+        placeholder="Оценка от 1 до 10"
+    >
+
+    <button id="saveButton">Сохранить</button>
+</div>
+
+<hr>
+
+<div class="filters">
+    <input
+        id="searchInput"
+        type="text"
+        placeholder="Поиск по названию..."
+    >
+
+    <select id="filterType">
+        <option value="all">Все типы</option>
+        <option value="game">Игры</option>
+        <option value="movie">Фильмы</option>
+        <option value="book">Книги</option>
+    </select>
+
+    <select id="filterStatus">
+        <option value="all">Все статусы</option>
+        <option value="planned">В планах</option>
+        <option value="in_progress">В процессе</option>
+        <option value="completed">Завершено</option>
+    </select>
+
+    <select id="sortSelect">
+        <option value="default">По порядку добавления</option>
+        <option value="newest">Сначала новые</option>
+        <option value="rating_desc">Сначала высокая оценка</option>
+        <option value="rating_asc">Сначала низкая оценка</option>
+    </select>
+</div>
+
+<div class="cards" id="cardsContainer">
+</div>
+
+<script src="script.js"></script>

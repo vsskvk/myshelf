@@ -1,0 +1,67 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px
+}
+
+h1 {
+    font-size: 40px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+.card {
+    border: 1px solid #cccccc;
+    padding: 20px;
+    margin-top: 15px;
+    border-radius: 10px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.type {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.game {
+    background-color: #dceeff;
+}
+
+.movie {
+    background-color: #ffe4e4;
+}
+
+.book {
+    background-color: #e5f7df;
+}
+
+.add-form {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #cccccc;
+    border-radius: 10PX;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.filters select {
+    padding: 8px;
+}
+
+.filters input {
+    padding: 8px;
+    width: 220px;
+}
