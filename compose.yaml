@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_PATH: /data/myshelf.db
+    volumes:
+      - myshelf-data:/data
+
+  go-service:
+    build: ./go_service
+    ports:
+      - "8080:8080"
+    environment:
+      PYTHON_URL: http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  myshelf-data:

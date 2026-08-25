@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 type Item struct {
@@ -43,13 +44,17 @@ func randomHandler(w http.ResponseWriter, r *http.Request) {
 		params.Set("status", status)
 	}
 
-	pythonURL := "http://127.0.0.1:8000/items"
+	pythonBaseURL := os.Getenv("PYTHON_URL")
 
-	if len(params) > 0 {
-		pythonURL += "?" + params.Encode()
+	if pythonBaseURL == "" {
+		pythonBaseURL = "http://127.0.0.1:8000/items"
 	}
 
-	response, err := http.Get(pythonURL)
+	if len(params) > 0 {
+		pythonBaseURL += "?" + params.Encode()
+	}
+
+	response, err := http.Get(pythonBaseURL)
 
 	if err != nil {
 		http.Error(w, "Не удалось связаться с Python", http.StatusInternalServerError)

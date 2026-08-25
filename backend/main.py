@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
+import os
+
+DATABASE_PATH = os.getenv("DATABASE_PATH", "myshelf.db")
 
 app = FastAPI()
 
@@ -13,7 +16,7 @@ app.add_middleware(
 )
 
 def init_database():
-    connection = sqlite3.connect("myshelf.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
@@ -64,7 +67,7 @@ def get_items(
     sort: str | None = None,
     search: str | None = None
 ):
-    connection = sqlite3.connect("myshelf.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
 
     cursor = connection.cursor()
@@ -112,7 +115,7 @@ def get_items(
 
 @app.post("/items")
 def add_items(item: Item):
-    connection = sqlite3.connect("myshelf.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
@@ -139,7 +142,7 @@ def add_items(item: Item):
 
 @app.delete("/items/{item_id}")
 def delete_item(item_id: int):
-    connection = sqlite3.connect("myshelf.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
@@ -160,7 +163,7 @@ def delete_item(item_id: int):
 
 @app.put("/items/{item_id}")
 def update_item(item_id: int, item: Item):
-    connection = sqlite3.connect("myshelf.db")
+    connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
