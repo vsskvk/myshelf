@@ -142,6 +142,8 @@ function createCard(item) {
     editButton.addEventListener(
         "click",
         function() {
+            event.stopPropagation();
+
             editingItemId = item.id;
 
             titleInput.value = item.title;
@@ -460,8 +462,7 @@ button.addEventListener(
         statusSelect.value = "planned";
         ratingInput.value = "";
 
-        formTitle.textContent = "Добавить в коллекцию";
-
+        formTitle.textContent = "Добавить элемент";
         saveButton.textContent = "Сохранить";
 
         form.style.display = "flex";
