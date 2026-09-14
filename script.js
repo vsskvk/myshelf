@@ -12,15 +12,43 @@ const randomResult = document.getElementById("randomResult");
 
 const cardsContainer = document.getElementById("cardsContainer");
 
+const totalCount = document.getElementById("totalCount");
+const completedCount = document.getElementById("completedCount");
+const progressCount = document.getElementById("progressCount");
+const plannedCount = document.getElementById("plannedCount");
+
+const completedPercent = document.getElementById("completedPercent");
+const progressPercent = document.getElementById("progressPercent");
+const plannedPercent = document.getElementById("plannedPercent");
+const collectionCount = document.getElementById("collectionCount");
+
 const filterType = document.getElementById("filterType");
 const filterStatus = document.getElementById("filterStatus");
+
+const sidebarFilterItems = document.querySelectorAll(".nav-item[data-filter-type][data-filter-status]");
+
 const sortSelect = document.getElementById("sortSelect");
 const searchInput = document.getElementById("searchInput");
 
 const randomType = document.getElementById("randomType");
 const randomStatus = document.getElementById("randomStatus");
 
+const formTitle = document.getElementById("formTitle");
+
+const cancelButton = document.getElementById("cancelButton")
+
 let editingItemId = null;
+let searchTimer = null;
+
+function closeForm() {
+    form.style.display = "none";
+    editingItemId = null;
+}
+
+cancelButton.addEventListener(
+    "click",
+    closeForm
+)
 
 function getTypeName(type) {
     if (type === 'game') {
@@ -51,39 +79,71 @@ function getStatusName(status) {
 }
 
 function createCard(item) {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.classList.add("card");
 
-    const titleElement = document.createElement("h2");
-    titleElement.textContent = item.title;
-    
-    const typeElement = document.createElement("p");
-    typeElement.textContent = "Тип: " + getTypeName(item.type);
+    const cover = document.createElement("div");
+    cover.classList.add("card-cover");
+    cover.textContent = item.title;
 
-    const statusElement = document.createElement("p");
-    statusElement.textContent = "Статус: " + getStatusName(item.status);
+    const cardInfo = document.createElement("div");
+    cardInfo.classList.add("card-info");
 
-    const ratingElement = document.createElement("p");
+    const cardHeader = document.createElement("div");
+    cardHeader.classList.add("card-header");
+
+    const title = document.createElement("h3");
+    title.classList.add("card-title");
+    title.textContent = item.title;
+
+    const topActions = document.createElement("div");
+    topActions.classList.add("card-actions-top");
+
+    const favoriteButton = document.createElement("button");
+    favoriteButton.classList.add("favorite-button");
+    favoriteButton.textContent = "♡";
+
+    const moreButton = document.createElement("button");
+    moreButton.classList.add("more-button");
+    moreButton.textContent = "⋮";
+
+    const typeBadge = document.createElement("div");
+    typeBadge.classList.add("type-badge", item.type);
+    typeBadge.textContent = getTypeName(item.type);
+
+    const statusBadge = document.createElement("div");
+    statusBadge.classList.add("status-badge", item.status);
+    statusBadge.textContent = getStatusName(item.status);
+
+    const rating = document.createElement("div");
+    rating.classList.add("rating");
+
+    const ratingLabel = document.createElement("span");
+    ratingLabel.classList.add("rating-label");
+    ratingLabel.textContent = "Оценка";
+
+    const ratingValue = document.createElement("div");
+    ratingValue.classList.add("rating-value");
 
     if (item.rating === null) {
-        ratingElement.textContent = "Оценка: нет";
+        ratingValue.textContent = "- / 10";
     } else {
-        ratingElement.textContent = "Оценка: " + item.rating + "/10";
+        ratingValue.textContent = "★ " + item.rating + " / 10"
     }
 
-    typeElement.classList.add("type");
-    typeElement.classList.add(item.type);
+    const editButton = document.createElement("button");
+    editButton.classList.add("edit-button");
+    editButton.textContent = "✎";
 
-    const deleteButton = document. createElement("button");
-    deleteButton.textContent = "Удалить";
-
-    const editButton = document.createElement("buttom");
-    editButton.textContent = "Редактировать";
+    const deleteButton = document.createElement("button");
+    deleteButton.classList.add("delete-button")
+    deleteButton.textContent = "🗑";
 
     editButton.addEventListener(
         "click",
         function() {
             editingItemId = item.id;
+
             titleInput.value = item.title;
             typeSelect.value = item.type;
             statusSelect.value = item.status;
@@ -94,11 +154,13 @@ function createCard(item) {
                 ratingInput.value = item.rating;
             }
 
+            formTitle.textContent = "Редактировать элемент";
+
             saveButton.textContent = "Сохранить изменения";
 
-            form.style.display = "block";
+            form.style.display = "flex";
         }
-    )
+    );
 
     deleteButton.addEventListener(
         "click",
@@ -111,23 +173,41 @@ function createCard(item) {
             );
 
             if (response.ok) {
-                card.remove();
+                await loadItems();
+                await loadStats();
             }
         }
     );
 
-    card.appendChild(titleElement);
-    card.appendChild(typeElement);
-    card.appendChild(statusElement);
-    card.appendChild(ratingElement);
-    card.appendChild(deleteButton);
-    card.appendChild(editButton);
+    const cardFooter = document.createElement("div");
+    cardFooter.classList.add("card-footer");
+
+    topActions.appendChild(favoriteButton);
+    topActions.appendChild(moreButton);
+
+    cardHeader.appendChild(title);
+    cardHeader.appendChild(topActions);
+
+    rating.appendChild(ratingLabel);
+    rating.appendChild(ratingValue);
+
+    cardFooter.appendChild(editButton);
+    cardFooter.appendChild(deleteButton);
+
+    cardInfo.appendChild(cardHeader);
+    cardInfo.appendChild(typeBadge);
+    cardInfo.appendChild(statusBadge);
+    cardInfo.appendChild(rating);
+    cardInfo.appendChild(cardFooter);
+
+    card.appendChild(cover);
+    card.appendChild(cardInfo);
 
     cardsContainer.appendChild(card);
 }
 
 async function loadItems() {
-    cardsContainer.innerHTML = "";
+    showCardsMessage("Загрузка...")
 
     const params = new URLSearchParams();
     const search = searchInput.value.trim();
@@ -153,7 +233,7 @@ async function loadItems() {
         );
     }
 
-    if (sortSelect.value !== "all") {
+    if (sortSelect.value !== "default") {
         params.append(
             "sort", 
             sortSelect.value
@@ -167,17 +247,120 @@ async function loadItems() {
         url += "?" + queryString;
     }
 
-    const response = await fetch(url);
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error("HTTP ошибка: " + response.status);
+        }
+
+        const items = await response.json();
+
+        cardsContainer.innerHTML = "";
+
+        if (items.length === 0) {
+            showCardsMessage("Ничего не найдено");
+            return;
+        }
+
+        items.forEach(
+            function(item) {
+                createCard(item);
+            }
+        )
+    } catch (error){
+        console.error(error);
+        showCardsMessage("Не удалось загрузить коллекцию");
+    }
+}
+
+function updateStats(items) {
+    const total = items.length;
+
+    const completedItems = items.filter(
+        function(item) {
+            return item.status === "completed";
+        }
+    );
+
+    const progressItems = items.filter(
+        function(item) {
+            return item.status === "in_progress";
+        }
+    );
+
+    const plannedItems = items.filter(
+        function(item) {
+            return item.status === "planned";
+        }
+    );
+
+    totalCount.textContent = total;
+    collectionCount.textContent = total;
+
+    completedCount.textContent = completedItems.length;
+    progressCount.textContent = progressItems.length;
+    plannedCount.textContent = plannedItems.length;
+
+    if (total === 0) {
+        completedPercent.textContent = "0% коллекции";
+        progressPercent.textContent = "0% коллекции";
+        plannedPercent.textContent = "0% коллекции";
+
+        return;
+    }
+
+    const completedPercentage = Math.round(completedItems.length / total * 100);
+    const progressPercentage = Math.round(progressItems.length / total * 100);
+    const plannedPercentage = Math.round(plannedItems.length / total * 100);
+
+    completedPercent.textContent = completedPercentage + "% коллекции";
+    progressPercent.textContent = progressPercentage + "% коллекции";
+    plannedPercent.textContent = plannedPercentage + "% коллекции";
+}
+
+async function loadStats() {
+    const response = await fetch("http://127.0.0.1:8000/items");
     const items = await response.json();
 
-    items.forEach(
-        function(item) {
-            createCard(item);
-        }
-    )
+    updateStats(items);    
+}
+
+sidebarFilterItems.forEach(
+    function(navItem) {
+        navItem.addEventListener(
+            "click",
+            function(event) {
+                event.preventDefault();
+
+                const type = navItem.dataset.filterType;
+                const status = navItem.dataset.filterStatus;
+
+                filterType.value = type;
+                filterStatus.value = status;
+
+                searchInput.value = "";
+
+                updateSidebarActive();
+                loadItems();
+            }
+        );
+    }
+);
+
+function showCardsMessage(text) {
+    cardsContainer.innerHTML = "";
+
+    const message = document.createElement("div");
+
+    message.classList.add("cards-message");
+    message.textContent = text;
+
+    cardsContainer.appendChild(message);
 }
 
 loadItems();
+loadStats();
 
 randomButton.addEventListener(
     "click",
@@ -205,7 +388,7 @@ randomButton.addEventListener(
         const response = await fetch(url);
 
         if (!response.ok) {
-            randomResult.textContent = "Ничегоподходящего не найдено";
+            randomResult.textContent = "Ничего подходящего не найдено";
             return
         }
 
@@ -213,11 +396,27 @@ randomButton.addEventListener(
 
         randomResult.textContent = "Сегодня: " + item.title + " - " + getTypeName(item.type);
     }
-)
+);
+
+function updateSidebarActive() {
+    sidebarFilterItems.forEach(
+        function(navItem) {
+            const typeMatches = navItem.dataset.filterType === filterType.value;
+            const statusMatches = navItem.dataset.filterStatus === filterStatus.value;
+
+            if (typeMatches && statusMatches) {
+                navItem.classList.add("active");
+            } else {
+                navItem.classList.remove("active");
+            }
+        }
+    );
+}
 
 filterType.addEventListener(
     "change",
     function() {
+        updateSidebarActive();
         loadItems();
     }
 );
@@ -225,6 +424,7 @@ filterType.addEventListener(
 filterStatus.addEventListener(
     "change",
     function() {
+        updateSidebarActive();
         loadItems();
     }
 );
@@ -239,7 +439,14 @@ sortSelect.addEventListener(
 searchInput.addEventListener(
     "input",
     function() {
-        loadItems();
+        clearTimeout(searchTimer);
+
+        searchTimer = setTimeout(
+            function() {
+                loadItems();
+            },
+            400
+        );
     }
 );
 
@@ -253,9 +460,11 @@ button.addEventListener(
         statusSelect.value = "planned";
         ratingInput.value = "";
 
+        formTitle.textContent = "Добавить в коллекцию";
+
         saveButton.textContent = "Сохранить";
 
-        form.style.display = "block";
+        form.style.display = "flex";
     }
 );
 
@@ -311,17 +520,40 @@ saveButton.addEventListener(
 
         if (!response.ok) {
             alert("Не удалось сохранить");
+            return;
         }
 
         titleInput.value = "";
         typeSelect.value = "game";
         statusSelect.value = "planned";
         ratingInput.value = "";
-        form.style.display = "none";
 
-        editingItemId = null;
+        closeForm();
+
         saveButton.textContent = "Сохранить";
 
         await loadItems();
+        await loadStats();
+    }
+);
+
+document.addEventListener(
+    "click",
+    function(event) {
+        const clickedInsideForm = form.contains(event.target);
+        const clickedAddButton = button.contains(event.target);
+
+        if (!clickedInsideForm && !clickedAddButton) {
+            closeForm();
+        }
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+        if (event.key === "Escape") {
+            closeForm();
+        }
     }
 );

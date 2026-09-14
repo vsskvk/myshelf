@@ -1,92 +1,335 @@
-<link rel="stylesheet" href="styles.css">
+<!DOCTYPE html>
 
-<h1>MyShelf</h1>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MyShelf</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
 
-<p>Моя коллекция фильмов, игр и книг - все в одном месте.</p>
+    <body>
+        <div class="app">
 
-<button id="addButton">Добавить</button>
+            <aside class="sidebar">
 
-<select id="randomType">
-    <option value="all">Что угодно</option>
-    <option value="game">Игру</option>
-    <option value="movie">Фильм</option>
-    <option value="book">Книгу</option>
-</select>
+                <div class="logo">
+                    <div class="logo-icon">◆</div>
+                    <div class="logo-text">MyShelf</div>
+                </div>
 
-<select id="randomStatus">
-    <option value="all">Любой статус</option>
-    <option value="planned">В планах</option>
-    <option value="in_progress">В процессе</option>
-    <option value="completed">Завершено</option>
-</select>
+                <nav class="navigation">
 
-<button id="randomButton">Что выбрать сегодня?</button>
-<p id="randomResult"></p>
+                    <a 
+                        class="nav-item active" 
+                        href="#" 
+                        data-filter-type="all"
+                        data-filter-status="all"
+                        >
+                        <span class="nav-icon">⌂</span>
+                        <span>Моя коллекция</span>
+                    </a>
 
-<div id="addForm" class="add-form">
-    <h2>Добавить в коллекцию</h2>
+                    <div class="nav-group">
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="movie"
+                            data-filter-status="all"
+                            >
+                            <span class="nav-icon">▣</span>
+                            <span>Фильмы</span>
+                        </a>
 
-    <input 
-        id="titleInput"
-        type="text"
-        placeholder="Название"
-    >
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="game"
+                            data-filter-status="all"
+                            >
+                            <span class="nav-icon">🎮</span>
+                            <span>Игры</span>
+                        </a>
 
-    <select id="typeSelect">
-        <option value="game">Игра</option>
-        <option value="movie">Фильм</option>
-        <option value="book">Книга</option>
-    </select>
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="book"
+                            data-filter-status="all"
+                            >
+                            <span class="nav-icon">▤</span>
+                            <span>Книги</span>
+                        </a>
+                    </div>
 
-    <select id="statusSelect">
-        <option value="planned">В планах</option>
-        <option value="in_progress">В процессе</option>
-        <option value="completed">Завершено</option>
-    </select>
+                    <div class="nav-divider"></div>
 
-    <input
-        id="ratingInput"
-        type="number"
-        min="1"
-        max="10"
-        placeholder="Оценка от 1 до 10"
-    >
+                    <div class="nav-group">
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="all"
+                            data-filter-status="planned"
+                            >
+                            <span class="nav-icon">◷</span>
+                            <span>В планах</span>
+                        </a>
 
-    <button id="saveButton">Сохранить</button>
-</div>
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="all"
+                            data-filter-status="in_progress"
+                            >
+                            <span class="nav-icon">↻</span>
+                            <span>В процессе</span>
+                        </a>
 
-<hr>
+                        <a 
+                            class="nav-item" 
+                            href="#"
+                            data-filter-type="all"
+                            data-filter-status="completed"
+                            >
+                            <span class="nav-icon">✓</span>
+                            <span>Завершено</span>
+                        </a>
 
-<div class="filters">
-    <input
-        id="searchInput"
-        type="text"
-        placeholder="Поиск по названию..."
-    >
+                        <a class="nav-item" href="#">
+                            <span class="nav-icon">♡</span>
+                            <span>Избранное</span>
+                        </a>
+                    </div>
 
-    <select id="filterType">
-        <option value="all">Все типы</option>
-        <option value="game">Игры</option>
-        <option value="movie">Фильмы</option>
-        <option value="book">Книги</option>
-    </select>
+                    <div class="nav-button">
+                        <a class="nav-item" href="#">
+                            <span class="nav-icon">⌁</span>
+                            <span>Статистика</span>
+                        </a>
 
-    <select id="filterStatus">
-        <option value="all">Все статусы</option>
-        <option value="planned">В планах</option>
-        <option value="in_progress">В процессе</option>
-        <option value="completed">Завершено</option>
-    </select>
+                        <a class="nav-item" href="#">
+                            <span class="nav-icon">⚙</span>
+                            <span>Настройки</span>
+                        </a>
 
-    <select id="sortSelect">
-        <option value="default">По порядку добавления</option>
-        <option value="newest">Сначала новые</option>
-        <option value="rating_desc">Сначала высокая оценка</option>
-        <option value="rating_asc">Сначала низкая оценка</option>
-    </select>
-</div>
+                        <a class="nav-item" href="#">
+                            <span class="nav-icon">ⓘ</span>
+                            <span>О проекте</span>
+                        </a>
+                    </div>
 
-<div class="cards" id="cardsContainer">
-</div>
 
-<script src="script.js"></script>
+                </nav>
+
+            </aside>
+
+            <main class="main">
+
+                <header class="page-header">
+
+                    <div class="header-text">
+                        <h1>Моя коллекция ✨</h1>
+                        <p>Твоя коллекция фильмов, игр и книг в одном месте</p>
+                    </div>
+
+                    <div class="header-actions">
+                        <div class="add-menu">
+                            <button id="addButton" class="primary-button" type="button">
+                                + Добавить элемент
+                            </button>
+
+                            <div id="addForm" class="modal">
+                                <div class="modal-panel">
+                                    <div class="modal-header">
+                                        <div class="modal-header-text">
+
+                                            <h2 id="formTitle">Добавить элемент</h2>
+                                            <p>Добавить фильм, игру или книгу в свою коллекцию</p>
+
+                                        </div>
+                                    </div>
+                                    <div class="modal-fields">
+                                        <label class="form-field">
+
+                                            <span class="form-label">✎ Название</span>
+                                            <input id="titleInput" type="text" placeholder="Введите название">
+
+                                        </label>
+                                        <div class="form-row">
+                                            <label class="form-field">
+
+                                                <span class="form-label">▣ Тип</span>
+
+                                                <select id="typeSelect">
+                                                    <option value="game">🎮 Игра</option>
+                                                    <option value="movie">🎬 Фильм</option>
+                                                    <option value="book">📚 Книга</option>
+                                                </select>
+
+                                            </label>
+                                            <label class="form-field">
+
+                                                <span class="form-label">↻ Статус</span>
+
+                                                <select id="statusSelect">
+                                                    <option value="planned">В планах</option>
+                                                    <option value="in_progress">В процессе</option>
+                                                    <option value="completed">Завершено</option>
+                                                </select>
+
+                                            </label>
+                                        </div>
+                                        <label class="form-field">
+
+                                            <span class="form-label">☆ Оценка</span>
+                                            <input id="ratingInput" type="number" min="1" max="10" placeholder="1-10">
+
+                                        </label>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button id="cancelButton" class="secondary-button" type="button">Отмена</button>
+                                        <button id="saveButton" class="primary-button" type="button">Сохранить</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="icon-button" type="button" aria-label="Переключить тему">
+                            ☾
+                        </button>
+
+                        <div class="avatar"></div>
+                    </div>
+
+                </header>
+
+                <select id="randomType">
+                    <option value="all">Что угодно</option>
+                    <option value="game">Игру</option>
+                    <option value="movie">Фильм</option>
+                    <option value="book">Книгу</option>
+                </select>
+
+                <select id="randomStatus">
+                    <option value="all">Любой статус</option>
+                    <option value="planned">В планах</option>
+                    <option value="in_progress">В процессе</option>
+                    <option value="completed">Завершено</option>
+                </select>
+
+                <button id="randomButton" type="button">Что выбрать сегодня?</button>
+                <p id="randomResult"></p>
+
+                <hr>
+
+                <div class="filters">
+                    <input
+                        id="searchInput"
+                        type="text"
+                        placeholder="Поиск по названию..."
+                    >
+
+                    <select id="filterType">
+                        <option value="all">Все типы</option>
+                        <option value="game">Игры</option>
+                        <option value="movie">Фильмы</option>
+                        <option value="book">Книги</option>
+                    </select>
+
+                    <select id="filterStatus">
+                        <option value="all">Все статусы</option>
+                        <option value="planned">В планах</option>
+                        <option value="in_progress">В процессе</option>
+                        <option value="completed">Завершено</option>
+                    </select>
+
+                    <select id="sortSelect">
+                        <option value="default">По порядку добавления</option>
+                        <option value="newest">Сначала новые</option>
+                        <option value="rating_desc">Сначала высокая оценка</option>
+                        <option value="rating_asc">Сначала низкая оценка</option>
+                    </select>
+                </div>
+
+                <section class="stats">
+
+                    <div class="stat-card total">
+                        <div class="stat-icon">◇</div>
+
+                        <div class="stat-content">
+                            <span class="stat-label">Всего элементов</span>
+                            <strong class="stat-value" id="totalCount">0</strong>
+                            <span class="stat-note">+0 за неделю</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card completed">
+                        <div class="stat-icon">✓</div>
+
+                        <div class="stat-content">
+                            <span class="stat-label">Завершено</span>
+                            <strong class="stat-value" id="completedCount">0</strong>
+                            <span class="stat-note" id="completedPercent">0% коллекции</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card progress">
+                        <div class="stat-icon">↻</div>
+
+                        <div class="stat-content">
+                            <span class="stat-label">В процессе</span>
+                            <strong class="stat-value" id="progressCount">0</strong>
+                            <span class="stat-note" id="progressPercent">0% коллекции</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card planned">
+                        <div class="stat-icon">◷</div>
+
+                        <div class="stat-content">
+                            <span class="stat-label">В планах</span>
+                            <strong class="stat-value" id="plannedCount">0</strong>
+                            <span class="stat-note" id="plannedPercent">0% коллекции</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card favorite">
+                        <div class="stat-icon">♡</div>
+
+                        <div class="stat-content">
+                            <span class="stat-label">Избранное</span>
+                            <strong class="stat-value">0</strong>
+                            <span class="stat-note">0% коллекции</span>
+                        </div>
+                    </div>
+
+                </section>
+
+                <section class="collection">
+
+                    <div class="collection-header">
+                        <div class="collection-title">
+                            <h2>Все элементы</h2>
+                            <span class="collection-count" id="collectionCount">0</span>
+                        </div>
+
+                        <div class="collection-controls">
+                            <button class="view-button" type="button" aria-label="Список">≡</button>
+                            <button class="view-button active" type="button" aria-label="Сетка">⊞</button>
+                            
+                            <select class="items-per-view">
+                                <option>Показать: 12</option>
+                                <option>Показать: 24</option>
+                                <option>Показать: 48</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cards" id="cardsContainer"></div>
+
+                </section>
+            </main>
+        </div>
+        <script src="script.js"></script>
+    </body>
+</html>
