@@ -40,6 +40,13 @@ const cancelButton = document.getElementById("cancelButton")
 let editingItemId = null;
 let searchTimer = null;
 
+function resetForm() {
+    titleInput.value = "";
+    typeSelect.value = "game";
+    statusSelect.value = "planned";
+    ratingInput.value = "";
+}
+
 function closeForm() {
     form.style.display = "none";
     editingItemId = null;
@@ -76,6 +83,41 @@ function getStatusName(status) {
     }
 
     return "Не указан"
+}
+
+function openAddForm() {
+    editingItemId = null;
+
+    resetForm();
+
+    formTitle.textContent = "Добавить элемент";
+    saveButton.textContent = "Сохранить";
+
+    form.style.display = "flex";
+}
+
+function openEditForm(item) {
+    editingItemId = item.id;
+
+    titleInput.value = item.title;
+    typeSelect.value = item.type;
+    statusSelect.value = item.status;
+
+    if (item.rating === null) {
+        ratingInput.value = "";
+    } else {
+        ratingInput.value = item.rating;
+    }
+
+    formTitle.textContent = "Редактировать элемент";
+    saveButton.textContent = "Сохранить изменения";
+
+    form.style.display = "flex";
+}
+
+async function refreshCollection() {
+    await loadItems();
+    await loadStats();
 }
 
 function createCard(item) {
@@ -141,42 +183,34 @@ function createCard(item) {
 
     editButton.addEventListener(
         "click",
-        function() {
+        function(event) {
             event.stopPropagation();
 
-            editingItemId = item.id;
-
-            titleInput.value = item.title;
-            typeSelect.value = item.type;
-            statusSelect.value = item.status;
-
-            if (item.rating === null) {
-                ratingInput.value = "";
-            } else {
-                ratingInput.value = item.rating;
-            }
-
-            formTitle.textContent = "Редактировать элемент";
-
-            saveButton.textContent = "Сохранить изменения";
-
-            form.style.display = "flex";
+            openEditForm(item);
         }
     );
 
     deleteButton.addEventListener(
         "click",
         async function() {
-            const response = await fetch(
-                "http://127.0.0.1:8000/items/" + item.id,
-                {
-                    method: "DELETE"
-                }
-            );
+            try{
+                const response = await fetch(
+                    "http://127.0.0.1:8000/items/" + item.id,
+                    {
+                        method: "DELETE"
+                    }
+                );
 
-            if (response.ok) {
-                await loadItems();
-                await loadStats();
+                if (!response.ok) {
+                    alert("Не удалось удалить элемент");
+                    return;
+                }
+
+                await refreshCollection();
+
+            } catch(error) {
+                console.error(error);
+                alert("Не удалось связаться с сервером");
             }
         }
     );
@@ -322,10 +356,20 @@ function updateStats(items) {
 }
 
 async function loadStats() {
-    const response = await fetch("http://127.0.0.1:8000/items");
-    const items = await response.json();
+    try {
+        const response = await fetch("http://127.0.0.1:8000/items");
 
-    updateStats(items);    
+        if (!response.ok) {
+            throw new Error("HTTP ошибка: " + response.status);
+        }
+
+        const items = await response.json();
+
+        updateStats(items);
+
+    } catch(error) {
+        console.error("Ошибка загрузки статистики:", error);
+    } 
 }
 
 sidebarFilterItems.forEach(
@@ -387,16 +431,21 @@ randomButton.addEventListener(
             url += "?" + queryString;
         }
 
-        const response = await fetch(url);
+        try {
+            const response = await fetch(url);
 
-        if (!response.ok) {
-            randomResult.textContent = "Ничего подходящего не найдено";
-            return
+            if (!response.ok) {
+                randomResult.textContent = "Ничего подходящего не найдено";
+                return
+            }
+
+            const item = await response.json();
+
+            randomResult.textContent = "Сегодня: " + item.title + " - " + getTypeName(item.type);
+        } catch(error) {
+            console.error("Ошибка случайного выбора:", error);
+            randomResult.textContent = "Не удалось связаться с сервером";
         }
-
-        const item = await response.json();
-
-        randomResult.textContent = "Сегодня: " + item.title + " - " + getTypeName(item.type);
     }
 );
 
@@ -454,25 +503,13 @@ searchInput.addEventListener(
 
 button.addEventListener(
     "click", 
-    function() {
-        editingItemId = null;
-
-        titleInput.value = "";
-        typeSelect.value = "game";
-        statusSelect.value = "planned";
-        ratingInput.value = "";
-
-        formTitle.textContent = "Добавить элемент";
-        saveButton.textContent = "Сохранить";
-
-        form.style.display = "flex";
-    }
+    openAddForm
 );
 
 saveButton.addEventListener(
     'click',
     async function() {
-        const title = titleInput.value;
+        const title = titleInput.value.trim();
         const type = typeSelect.value;
         const status = statusSelect.value;
         const ratingValue = ratingInput.value;
@@ -508,34 +545,35 @@ saveButton.addEventListener(
             method = "PUT"
         }
 
-        const response = await fetch(
-            url,
-            {
-                method: method,
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(item)
+        try {
+            const response = await fetch(
+                url,
+                {
+                    method: method,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(item)
+                }
+            );
+
+            if (!response.ok) {
+                alert("Не удалось сохранить");
+                return;
             }
-        );
 
-        if (!response.ok) {
-            alert("Не удалось сохранить");
-            return;
+            resetForm();
+            closeForm();
+
+            saveButton.textContent = "Сохранить";
+
+            await refreshCollection();
+
+        }catch(error) {
+            console.error(error);
+            alert("Не удалось связаться с сервером");
         }
-
-        titleInput.value = "";
-        typeSelect.value = "game";
-        statusSelect.value = "planned";
-        ratingInput.value = "";
-
-        closeForm();
-
-        saveButton.textContent = "Сохранить";
-
-        await loadItems();
-        await loadStats();
-    }
+    } 
 );
 
 document.addEventListener(
