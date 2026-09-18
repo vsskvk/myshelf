@@ -1,55 +1,322 @@
-const button = document.getElementById("addButton");
-const form = document.getElementById("addForm");
+// config
+const API_BASE_URL = "http://127.0.0.1:8000";
+const RANDOM_SERVICE_URL = "http://127.0.0.1:8080";
 
+// form
+const addButton = document.getElementById("addButton");
+const addForm = document.getElementById("addForm");
 const titleInput = document.getElementById("titleInput");
 const typeSelect = document.getElementById("typeSelect");
-const statusSelect = document.getElementById("statusSelect");
-const ratingInput = document.getElementById("ratingInput");
 
-const saveButton = document.getElementById("saveButton");
+// random
 const randomButton = document.getElementById("randomButton");
 const randomResult = document.getElementById("randomResult");
 
+// collection
 const cardsContainer = document.getElementById("cardsContainer");
-
-const totalCount = document.getElementById("totalCount");
-const completedCount = document.getElementById("completedCount");
-const progressCount = document.getElementById("progressCount");
-const plannedCount = document.getElementById("plannedCount");
-
-const completedPercent = document.getElementById("completedPercent");
-const progressPercent = document.getElementById("progressPercent");
-const plannedPercent = document.getElementById("plannedPercent");
 const collectionCount = document.getElementById("collectionCount");
 
+// filters
 const filterType = document.getElementById("filterType");
 const filterStatus = document.getElementById("filterStatus");
-
-const sidebarFilterItems = document.querySelectorAll(".nav-item[data-filter-type][data-filter-status]");
-
 const sortSelect = document.getElementById("sortSelect");
 const searchInput = document.getElementById("searchInput");
 
+// stats
+const totalCount = document.getElementById("totalCount");
+
+const statusSelect = document.getElementById("statusSelect");
+const ratingInput = document.getElementById("ratingInput");
+const saveButton = document.getElementById("saveButton");
+const randomAgainButton = document.getElementById("randomAgainButton");
+const randomOpenButton = document.getElementById("randomOpenButton");
+const randomCover = document.getElementById("randomCover");
+const randomTitle = document.getElementById("randomTitle");
+const randomTypeBadge = document.getElementById("randomTypeBadge");
+const randomStatusBadge = document.getElementById("randomStatusBadge");
+const randomRating = document.getElementById("randomRating");
+const randomMenu = document.querySelector(".random-menu");
+const completedCount = document.getElementById("completedCount");
+const progressCount = document.getElementById("progressCount");
+const plannedCount = document.getElementById("plannedCount");
+const completedPercent = document.getElementById("completedPercent");
+const progressPercent = document.getElementById("progressPercent");
+const plannedPercent = document.getElementById("plannedPercent");
 const randomType = document.getElementById("randomType");
 const randomStatus = document.getElementById("randomStatus");
-
 const formTitle = document.getElementById("formTitle");
-
 const cancelButton = document.getElementById("cancelButton")
+const customSelectRegistry = new Map();
 
 let editingItemId = null;
 let searchTimer = null;
+let currentRandomItem = null;
+let randomLoading = false;
+
+function renderCustomSelectContent(container, nativeOption) {
+    container.replaceChildren();
+
+    const iconPath = nativeOption.dataset.icon;
+
+    if (iconPath) {
+        const icon = document.createElement("img");
+
+        icon.src = iconPath;
+        icon.alt = "";
+        icon.classList.add("custom-select-option-icon");
+
+        container.appendChild(icon);
+    }
+
+    const text = document.createElement("span");
+
+    text.classList.add("custom-select-option-label");
+    text.textContent = nativeOption.textContent.trim();
+
+    container.appendChild(text);
+}
+
+function syncCustomSelect(select) {
+    const component = customSelectRegistry.get(select);
+
+    if (!component) {
+        return;
+    }
+
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption) {
+        renderCustomSelectContent(component.value, selectedOption);
+    }
+
+    component.options.forEach(
+        function(optionData) {
+            const isSelected = optionData.nativeOption.selected;
+
+            optionData.addButton
+                .classList
+                .toggle(
+                    "selected",
+                    isSelected
+                );
+
+            optionData.addButton
+                .setAttribute(
+                    "aria-selected",
+                    String(isSelected)
+                );
+        }
+    );
+}
+
+function setSelectValue(select, value, notify = false) {
+    select.value = value;
+    syncCustomSelect(select);
+
+    if (notify) {
+        select.dispatchEvent(
+            new Event(
+                "change",
+                {bubbles: true}
+            )
+        );
+    }
+}
+
+function closeCustomSelect(wrapper) {
+    wrapper.classList.remove("open");
+
+    const button = wrapper.querySelector(".custom-select-button");
+
+    button.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+}
+
+function closeAllCustomSelects(exceptWrapper = null) {
+    customSelectRegistry.forEach(
+        function(component) {
+            if (component.wrapper !== exceptWrapper) {
+                closeCustomSelect(component.wrapper);
+            }
+        }
+    );
+}
+
+function initCustomSelect(select) {
+    if (customSelectRegistry.has(select)) {
+        return;
+    }
+
+    const wrapper = document.createElement("div");
+ 
+    wrapper.classList.add("custom-select");
+    select.parentNode.insertBefore(wrapper, select);
+
+    wrapper.appendChild(select);
+    select.classList.add("custom-select-native");
+    select.tabIndex = -1;
+
+    const addButton = document.createElement("addButton");
+
+    addButton.type = "addButton";
+    addButton.classList.add("custom-select-addButton");
+    addButton.setAttribute(
+        "aria-haspopup",
+        "listbox"
+    );
+    addButton.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    const value = document.createElement("span");
+    value.classList.add("custom-select-value");
+
+    const arrow = document.createElement("span");
+    arrow.classList.add("custom-select-arrow");
+
+    addButton.appendChild(value);
+    addButton.appendChild(arrow);
+
+    const menu = document.createElement("div");
+    menu.classList.add("custom-select-menu");
+    menu.setAttribute(
+        "role",
+        "listbox"
+    );
+
+    const optionDataList = [];
+
+    Array.from(select.options).forEach(
+        function(nativeOption) {
+            const optionButton = document.createElement("addButton");
+            optionButton.type = "addButton";
+            optionButton.classList.add("custom-select-option");
+            optionButton.setAttribute(
+                "role",
+                "option"
+            );
+
+            const optionContent = document.createElement("span");
+            optionContent.classList.add("custom-select-option-content");
+            renderCustomSelectContent(optionContent, nativeOption);
+
+            const check = document.createElement("span");
+            check.classList.add("custom-select-check");
+            check.textContent = "✓";
+
+            optionButton.appendChild(optionContent);
+            optionButton.appendChild(check);
+
+            if (nativeOption.disabled) {
+                optionButton.disabled = true;
+            }
+
+            optionButton.addEventListener(
+                "click",
+                function() {
+                    setSelectValue(
+                        select,
+                        nativeOption.value,
+                        true
+                    );
+                    closeCustomSelect(wrapper);
+
+                    addButton.focus();
+                }
+            );
+            menu.appendChild(optionButton);
+
+            optionDataList.push({
+                addButton: optionButton,
+                nativeOption: nativeOption
+            });
+        }
+    );   
+    wrapper.appendChild(addButton);
+    wrapper.appendChild(menu);
+
+    customSelectRegistry.set(
+        select,
+        {
+            wrapper: wrapper,
+            addButton: addButton,
+            value: value,
+            menu: menu,
+            options: optionDataList
+        }
+    );
+    syncCustomSelect(select);
+
+    addButton.addEventListener(
+        "click",
+        function() {
+            const shouldOpen = !wrapper.classList.contains("open");
+
+            closeAllCustomSelects(wrapper);
+
+            if (shouldOpen) {
+                wrapper.classList.add("open");
+
+                addButton.setAttribute(
+                    "aria-expanded",
+                    "true"
+                );
+
+                const selected = optionDataList.find(
+                    function(optionData) {
+                        return(optionData.nativeOption.selected);
+                    }
+                );
+
+                if (selected) {
+                    requestAnimationFrame(
+                        function() {
+                            selected.addButton.focus();
+                        }
+                    );
+                }
+            } else {
+                closeCustomSelect(wrapper);
+            }
+        }
+    );
+    select.addEventListener(
+        "change",
+        function() {
+            syncCustomSelect(select);
+        }
+    );
+}
+
+document.querySelectorAll("select[data-custom-select]").forEach(
+    function(select) {
+        initCustomSelect(select);
+    }
+);
 
 function resetForm() {
     titleInput.value = "";
-    typeSelect.value = "game";
-    statusSelect.value = "planned";
+    setSelectValue(
+        typeSelect,
+        "game"
+    );
+    setSelectValue(
+        statusSelect,
+        "planned"
+    );
     ratingInput.value = "";
 }
 
 function closeForm() {
-    form.style.display = "none";
+    addForm.style.display = "none";
     editingItemId = null;
+}
+
+function closeRandomResult() {
+    randomResult.style.display = "none";
 }
 
 cancelButton.addEventListener(
@@ -93,15 +360,21 @@ function openAddForm() {
     formTitle.textContent = "Добавить элемент";
     saveButton.textContent = "Сохранить";
 
-    form.style.display = "flex";
+    addForm.style.display = "flex";
 }
 
 function openEditForm(item) {
     editingItemId = item.id;
 
     titleInput.value = item.title;
-    typeSelect.value = item.type;
-    statusSelect.value = item.status;
+    setSelectValue(
+        typeSelect,
+        item.type
+    );
+    setSelectValue(
+        statusSelect,
+        item.status
+    );
 
     if (item.rating === null) {
         ratingInput.value = "";
@@ -112,7 +385,7 @@ function openEditForm(item) {
     formTitle.textContent = "Редактировать элемент";
     saveButton.textContent = "Сохранить изменения";
 
-    form.style.display = "flex";
+    addForm.style.display = "flex";
 }
 
 async function refreshCollection() {
@@ -123,6 +396,7 @@ async function refreshCollection() {
 function createCard(item) {
     const card = document.createElement("article");
     card.classList.add("card");
+    card.dataset.itemId = item.id;
 
     const cover = document.createElement("div");
     cover.classList.add("card-cover");
@@ -195,7 +469,7 @@ function createCard(item) {
         async function() {
             try{
                 const response = await fetch(
-                    "http://127.0.0.1:8000/items/" + item.id,
+                    API_BASE_URL + "/items/" + item.id,
                     {
                         method: "DELETE"
                     }
@@ -242,8 +516,12 @@ function createCard(item) {
     cardsContainer.appendChild(card);
 }
 
-async function loadItems() {
-    showCardsMessage("Загрузка...")
+async function loadItems(
+    showLoading = true
+) {
+    if (showLoading){
+        showCardsMessage("Загрузка...");
+    }
 
     const params = new URLSearchParams();
     const search = searchInput.value.trim();
@@ -276,7 +554,7 @@ async function loadItems() {
         );
     }
 
-    let url = "http://127.0.0.1:8000/items";
+    let url = API_BASE_URL + "/items";
     const queryString = params.toString();
 
     if (queryString !== "") {
@@ -357,7 +635,7 @@ function updateStats(items) {
 
 async function loadStats() {
     try {
-        const response = await fetch("http://127.0.0.1:8000/items");
+        const response = await fetch(API_BASE_URL + "/items");
 
         if (!response.ok) {
             throw new Error("HTTP ошибка: " + response.status);
@@ -372,28 +650,6 @@ async function loadStats() {
     } 
 }
 
-sidebarFilterItems.forEach(
-    function(navItem) {
-        navItem.addEventListener(
-            "click",
-            function(event) {
-                event.preventDefault();
-
-                const type = navItem.dataset.filterType;
-                const status = navItem.dataset.filterStatus;
-
-                filterType.value = type;
-                filterStatus.value = status;
-
-                searchInput.value = "";
-
-                updateSidebarActive();
-                loadItems();
-            }
-        );
-    }
-);
-
 function showCardsMessage(text) {
     cardsContainer.innerHTML = "";
 
@@ -405,69 +661,9 @@ function showCardsMessage(text) {
     cardsContainer.appendChild(message);
 }
 
-loadItems();
-loadStats();
-
-randomButton.addEventListener(
-    "click",
-    async function() {
-        randomResult.textContent = "Выбираю ...";
-
-        const params = new URLSearchParams();
-
-        if (randomType.value !== "all") {
-            params.append("type", randomType.value);
-        }
-
-        if (randomStatus.value !== "all") {
-            params.append("status", randomStatus.value);
-        }
-
-        let url = "http://127.0.0.1:8080/random";
-
-        const queryString = params.toString();
-
-        if (queryString !== "") {
-            url += "?" + queryString;
-        }
-
-        try {
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                randomResult.textContent = "Ничего подходящего не найдено";
-                return
-            }
-
-            const item = await response.json();
-
-            randomResult.textContent = "Сегодня: " + item.title + " - " + getTypeName(item.type);
-        } catch(error) {
-            console.error("Ошибка случайного выбора:", error);
-            randomResult.textContent = "Не удалось связаться с сервером";
-        }
-    }
-);
-
-function updateSidebarActive() {
-    sidebarFilterItems.forEach(
-        function(navItem) {
-            const typeMatches = navItem.dataset.filterType === filterType.value;
-            const statusMatches = navItem.dataset.filterStatus === filterStatus.value;
-
-            if (typeMatches && statusMatches) {
-                navItem.classList.add("active");
-            } else {
-                navItem.classList.remove("active");
-            }
-        }
-    );
-}
-
 filterType.addEventListener(
     "change",
     function() {
-        updateSidebarActive();
         loadItems();
     }
 );
@@ -475,7 +671,6 @@ filterType.addEventListener(
 filterStatus.addEventListener(
     "change",
     function() {
-        updateSidebarActive();
         loadItems();
     }
 );
@@ -501,9 +696,12 @@ searchInput.addEventListener(
     }
 );
 
-button.addEventListener(
+addButton.addEventListener(
     "click", 
-    openAddForm
+    function() {
+        closeRandomResult();
+        openAddForm();
+    }
 );
 
 saveButton.addEventListener(
@@ -537,11 +735,11 @@ saveButton.addEventListener(
             rating: rating
         };
 
-        let url = "http://127.0.0.1:8000/items";
+        let url = API_BASE_URL + "/items";
         let method = "POST"
 
         if (editingItemId !== null) {
-            url = "http://127.0.0.1:8000/items/" + editingItemId;
+            url = API_BASE_URL + "/items/" + editingItemId;
             method = "PUT"
         }
 
@@ -579,8 +777,8 @@ saveButton.addEventListener(
 document.addEventListener(
     "click",
     function(event) {
-        const clickedInsideForm = form.contains(event.target);
-        const clickedAddButton = button.contains(event.target);
+        const clickedInsideForm = addForm.contains(event.target);
+        const clickedAddButton = addButton.contains(event.target);
 
         if (!clickedInsideForm && !clickedAddButton) {
             closeForm();
@@ -593,6 +791,177 @@ document.addEventListener(
     function(event) {
         if (event.key === "Escape") {
             closeForm();
+            closeRandomResult();
+            closeAllCustomSelects();
         }
     }
 );
+
+async function loadRandomItem() {
+    if (randomLoading) {
+        return;
+    }
+
+    randomLoading = true;
+
+    const popoverIsOpen = randomResult.style.display === "block";
+
+    randomButton.disabled = true;
+    randomAgainButton.disabled = true;
+
+    if (popoverIsOpen) {
+        randomAgainButton.textContent = "Выбираю...";
+    } else {
+        randomButton.textContent = "Выбираю...";
+    }
+
+    const params = new URLSearchParams();
+
+    if (randomType.value !== "all") {
+        params.append("type", randomType.value);
+    }
+
+    if (randomStatus.value !== "all") {
+        params.append("status", randomStatus.value);
+    }
+
+    let url = RANDOM_SERVICE_URL + "/random";
+
+    const queryString = params.toString();
+
+    if (queryString !== "") {
+        url += "?" + queryString;
+    }
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            alert("Ничего подходящего не найдено");
+            return;
+        }
+
+        const item = await response.json();
+
+        currentRandomItem = item;
+        randomCover.textContent = item.title;
+        randomTitle.textContent = item.title;
+        randomTypeBadge.textContent = getTypeName(item.type);
+        randomTypeBadge.className = "type-badge " + item.type;
+        randomStatusBadge.textContent = getStatusName(item.status);
+        randomStatusBadge.className = "status-badge " + item.status;
+
+        if (item.rating === null) {
+            randomRating.textContent = "-/10";
+        } else {
+            randomRating.textContent = "★ " + item.rating + " /10";
+        }
+
+        randomResult.style.display = "block";
+    } catch(error) {
+        console.error("Ошибка случайного выбора:", error);
+        alert("Не удалось связаться с сервисом");
+    } finally {
+        randomLoading = false;
+
+        randomButton.disabled = false;
+        randomAgainButton.disabled = false;
+
+        randomButton.textContent = "Что выбрать сегодня?";
+        randomAgainButton.textContent = "Еще вариант";
+    }
+}
+
+randomButton.addEventListener(
+    "click",
+    function() {
+        closeForm();
+        loadRandomItem();
+    }
+);
+
+randomAgainButton.addEventListener(
+    "click",
+    loadRandomItem
+);
+
+randomOpenButton.addEventListener(
+    "click",
+    async function() {
+        if (currentRandomItem == null) {
+            return;
+        }
+
+        let selectedCard = cardsContainer.querySelector('[data-item-id="' + currentRandomItem.id + '"]');
+
+        if (selectedCard === null) {
+            searchInput.value = "";
+            setSelectValue(
+                filterType,
+                "all"
+            );
+            setSelectValue(
+                filterStatus,
+                "all"
+            );
+            setSelectValue(
+                sortSelect,
+                "default"
+            );
+
+            await loadItems(false);
+
+            selectedCard = cardsContainer.querySelector('[data-item-id="' + currentRandomItem.id + '"]');
+        }
+
+        closeRandomResult();
+
+        if (selectedCard !== null) {
+            selectedCard.classList.add("card-highlight");
+
+            selectedCard.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+            });
+
+            setTimeout(
+                function() {
+                    selectedCard.classList.remove("card-highlight");
+                },
+                1600
+            );          
+        }
+    }
+);
+
+document.addEventListener(
+    "pointerdown",
+    function(event) {
+        const clickedInsideRandom = randomMenu.contains(event.target);
+
+        if (!clickedInsideRandom) {
+            closeRandomResult();
+        }
+    }
+);
+
+document.addEventListener(
+    "pointerdown",
+    function(event) {
+        let clickedInsideCustomSelect = false;
+
+        customSelectRegistry.forEach(
+            function(component) {
+                if (component.wrapper.contains(event.target)) {
+                    clickedInsideCustomSelect = true;
+                }
+            }
+        );
+        if (!clickedInsideCustomSelect) {
+            closeAllCustomSelects();
+        }
+    }
+);
+
+loadItems();
+loadStats();

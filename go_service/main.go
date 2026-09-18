@@ -47,14 +47,16 @@ func randomHandler(w http.ResponseWriter, r *http.Request) {
 	pythonBaseURL := os.Getenv("PYTHON_URL")
 
 	if pythonBaseURL == "" {
-		pythonBaseURL = "http://127.0.0.1:8000/items"
+		pythonBaseURL = "http://127.0.0.1:8000"
 	}
+
+	pythonURL := pythonBaseURL + "/items"
 
 	if len(params) > 0 {
-		pythonBaseURL += "?" + params.Encode()
+		pythonURL += "?" + params.Encode()
 	}
 
-	response, err := http.Get(pythonBaseURL)
+	response, err := http.Get(pythonURL)
 
 	if err != nil {
 		http.Error(w, "Не удалось связаться с Python", http.StatusInternalServerError)
@@ -63,6 +65,11 @@ func randomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		http.Error(w, "Python вернул ошибку: "+response.Status, http.StatusBadGateway)
+		return
+	}
 
 	var items []Item
 	err = json.NewDecoder(response.Body).Decode(&items)
