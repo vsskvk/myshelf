@@ -9,7 +9,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="styles.css?v=5">
+        <link rel="stylesheet" href="styles.css?v=7">
     </head>
 
     <body>
@@ -61,7 +61,7 @@
                             <span>Статистика</span>
                         </button>
                     </div>
-                    <div class="nav-button">
+                    <div class="nav-buttom">
                         <button class="nav-item" type="button" data-page="settings">
                             <span class="nav-icon">
                                 <img src="assets/icons/sidebar-settings.png" alt="">
@@ -85,10 +85,10 @@
 
                     <div class="header-text">
                         <h1 class="page-title">
-                            <span>Моя коллекция</span>
+                            <span id="pageTitleText">Моя коллекция</span>
                             <img class="page-title-icon" src="assets/icons/header-collection.png" alt="">
                         </h1>
-                        <p>Твоя коллекция фильмов, игр и книг в одном месте</p>
+                        <p id="pageSubtitle">Твоя коллекция фильмов, игр и книг в одном месте</p>
                     </div>
 
                     <div class="header-actions">
@@ -102,7 +102,7 @@
                                     <div class="modal-header">
                                         <div class="modal-header-text">
 
-                                            <h2>Сегоднешний выбор ✨</h2>
+                                            <h2>Сегодняшний выбор ✨</h2>
                                             <p>Случайная рекомендация из твоей коллекции</p>
 
                                         </div>
@@ -119,6 +119,18 @@
                                         </div>
                                     </div>
                                     <p class="random-note">Идеально для сегодняшнего вечера</p>
+                                    <select id="randomType">
+                                        <option value="all">Что угодно</option>
+                                        <option value="game">Игру</option>
+                                        <option value="movie">Фильм</option>
+                                        <option value="book">Книгу</option>
+                                    </select>
+                                    <select id="randomStatus">
+                                        <option value="all">Любой статус</option>
+                                        <option value="planned">В планах</option>
+                                        <option value="in_progress">В процессе</option>
+                                        <option value="completed">Завершено</option>
+                                    </select>
                                     <div class="modal-footer">
 
                                         <button id="randomAgainButton" class="secondary-button" type="button">
@@ -163,24 +175,9 @@
                                                 </span>
 
                                                 <select id="typeSelect" data-custom-select>
-                                                    <option 
-                                                        value="game"
-                                                        data-icon="assets/icons/sidebar-game.png"
-                                                        >
-                                                        Игра
-                                                    </option>
-                                                    <option 
-                                                        value="movie"
-                                                        data-icon="assets/icons/sidebar-movie.png"
-                                                        >
-                                                        Фильм
-                                                    </option>
-                                                    <option 
-                                                        value="book"
-                                                        data-icon="assets/icons/sidebar-book.png"
-                                                        >
-                                                        Книга
-                                                    </option>
+                                                    <option value="game" data-icon="assets/icons/sidebar-game.png">Игра</option>
+                                                    <option value="movie" data-icon="assets/icons/sidebar-movie.png">Фильм</option>
+                                                    <option value="book" data-icon="assets/icons/sidebar-book.png">Книга</option>
                                                 </select>
 
                                             </div>
@@ -220,21 +217,6 @@
                     </div>
 
                 </header>
-
-                <select id="randomType">
-                    <option value="all">Что угодно</option>
-                    <option value="game">Игру</option>
-                    <option value="movie">Фильм</option>
-                    <option value="book">Книгу</option>
-                </select>
-
-                <select id="randomStatus">
-                    <option value="all">Любой статус</option>
-                    <option value="planned">В планах</option>
-                    <option value="in_progress">В процессе</option>
-                    <option value="completed">Завершено</option>
-                </select>
-
                 <div class="filters">
                     <div class="search-field">
                         <input
@@ -278,7 +260,7 @@
                         <div class="stat-content">
                             <span class="stat-label">Всего элементов</span>
                             <strong class="stat-value" id="totalCount">0</strong>
-                            <span class="stat-note">+0 за неделю</span>
+                            <span class="stat-note" id="weeklyCount">+0 за неделю</span>
                         </div>
                     </div>
 
@@ -325,8 +307,8 @@
 
                         <div class="stat-content">
                             <span class="stat-label">Избранное</span>
-                            <strong class="stat-value">0</strong>
-                            <span class="stat-note">0% коллекции</span>
+                            <strong class="stat-value" id="favoriteCount">0</strong>
+                            <span class="stat-note" id="favoritePercent">0% коллекции</span>
                         </div>
                     </div>
 
@@ -336,7 +318,7 @@
 
                     <div class="collection-header">
                         <div class="collection-title">
-                            <h2>Все элементы</h2>
+                            <h2 id="collectionTitle">Все элементы</h2>
                             <span class="collection-count" id="collectionCount">0</span>
                         </div>
 
@@ -357,6 +339,22 @@
                 </section>
             </main>
         </div>
-        <script src="script.js?v=5"></script>
+        <div id="deleteConfirmModal" class="confirm-modal">
+            <div class="confirm-panel">
+                <h2>Удалить элемент?</h2>
+                <p id="deleteConfirmText">
+                    Вы уверены, что хотите удалить этот элемент?
+                </p>
+                <div class="confirm-actions">
+                    <button id="cancelDeleteButton" class="confirm-cancel-button" type="button">
+                        Отмена
+                    </button>
+                    <button id="confirmDeleteButton" class="confirm-delete-button" type="button">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script src="script.js?v=7"></script>
     </body>
 </html>

@@ -44,6 +44,18 @@ def init_database():
             ALTER TABLE items
             ADD COLUMN rating INTEGER
         """)
+
+    if "created_at" not in column_names:
+        cursor.execute("""
+            ALTER TABLE items
+            ADD COLUMN created_at TEXT
+        """)
+
+    if "favorite" not in column_names:
+        cursor.execute("""
+            ALTER TABLE items
+            ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0
+        """);
     
     connection.commit()
     connection.close()
@@ -56,6 +68,9 @@ class Item(BaseModel):
     status: str
     rating: int | None = None
 
+class FavoriteUpdate(BaseModel):
+    favorite: bool
+
 @app.get("/")
 def root():
     return {"message": "Пивет алаз"}
@@ -65,7 +80,8 @@ def get_items(
     type: str | None = None,
     status: str | None = None,
     sort: str | None = None,
-    search: str | None = None
+    search: str | None = None,
+    favorite: bool | None = None
 ):
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
@@ -73,7 +89,7 @@ def get_items(
     cursor = connection.cursor()
 
     query = """
-        SELECT id, title, type, status, rating
+        SELECT id, title, type, status, rating, created_at, favorite
         FROM items
     """
 
@@ -92,6 +108,10 @@ def get_items(
     if search is not None:
         conditions.append("title LIKE ?")
         values.append("%" + search +"%")
+
+    if favorite is not None:
+        conditions.append("favorite = ?")
+        values.append(int(favorite))
 
     if len(conditions) > 0:
         query += " WHERE " + " AND ".join(conditions)
@@ -120,8 +140,8 @@ def add_items(item: Item):
     cursor = connection.cursor()
 
     cursor.execute("""
-        INSERT INTO items (title, type, status, rating)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO items (title, type, status, rating, created_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         """,
         (item.title, item.type, item.status, item.rating)
     )
@@ -185,4 +205,29 @@ def update_item(item_id: int, item: Item):
         "type": item.type,
         "status": item.status,
         "rating": item.rating
+    }
+
+@app.patch("/items/{item_id}/favorite")
+def update_favorite(
+    item_id: int,
+    favorite_update: FavoriteUpdate
+):
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        UPDATE items
+        SET favorite = ?
+        WHERE id = ?
+        """,
+        (int(favorite_update.favorite), item_id)
+    )
+    
+    connection.commit()
+    connection.close()
+
+    return{
+        "id": item_id,
+        "favorite": favorite_update.favorite
     }

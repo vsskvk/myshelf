@@ -2,19 +2,152 @@
 const API_BASE_URL = "http://127.0.0.1:8000";
 const RANDOM_SERVICE_URL = "http://127.0.0.1:8080";
 
-// form
+// data
+const TYPE_NAMES = {
+    game: "Игра",
+    movie: "Фильм",
+    book: "Книга"
+};
+const STATUS_NAMES = {
+    planned: "В планах",
+    in_progress: "В процессе",
+    completed: "Завершено"
+};
+const FAVORITE_ICONS = {
+    empty: "assets/icons/favorite-empty.png",
+    filled: "assets/icons/favorite-filled.png"
+};
+const PAGE_CONFIG = {
+    collection: {
+        title: "Моя коллекция",
+        subtitle: "Твоя коллекция фильмов, игр и книг в одном месте",
+        collectionTitle: "Все элементы",
+        icon: "assets/icons/header-collection.png",
+        showStats: true,
+        showActions: true
+    },
+    favorites: {
+        title: "Избранное",
+        subtitle: "Твои любимые фильмы, игры и книги",
+        collectionTitle: "Избранные элементы",
+        icon: "assets/icons/sidebar-favorite.png",
+        showStats: false,
+        showActions: false
+    }
+};
+
+// helpers
+function openPage(page) {
+    const config = PAGE_CONFIG[page];
+
+    if (!config) {
+        return;
+    }
+
+    currentPage = page;
+    navItems.forEach(
+        function(navItem) {
+            navItem.classList.toggle(
+                "active",
+                navItem.dataset.page === page
+            );
+        }
+    );
+
+    pageTitleText.textContent = config.title;
+    pageSubtitle.textContent = config.subtitle;
+    pageTitleIcon.src = config.icon;
+    collectionTitle.textContent = config.collectionTitle;
+    statsSection.style.display = config.showStats ? "flex" : "none";
+    randomMenu.hidden = !config.showActions;
+    addMenu.hidden = !config.showActions;
+
+    loadItems();
+}
+function getTypeName(type) {
+    return TYPE_NAMES[type] ?? "Неизвестный тип";
+}
+function getStatusName(status) {
+    return STATUS_NAMES[status] ?? "Не указан";
+}
+function updateFavoriteButton(button, icon, isFavorite) {
+    button.classList.toggle("active", isFavorite);
+
+    icon.src = isFavorite
+        ? FAVORITE_ICONS.filled
+        : FAVORITE_ICONS.empty;
+
+    button.setAttribute(
+        "aria-label",
+        isFavorite
+        ? "Убрать из избранного"
+        : "Добавить в избранное"
+    );
+}
+function closeAllCardMenus(exceptMenu = null) {
+    document.querySelectorAll(".card-menu.open").forEach(
+        function(menu) {
+            if (menu !== exceptMenu) {
+                menu.classList.remove("open");
+            }
+        }
+    );
+}
+function openDeleteConfirm(item) {
+    pendingDeleteItem = item;
+
+    deleteConfirmText.textContent = 'Удалить "' + item.title + '" из коллекции?';
+    deleteConfirmModal.classList.add("open");
+}
+function closeDeleteConfirm() {
+    pendingDeleteItem = null;
+
+    deleteConfirmModal.classList.remove("open");
+}
+
+// add form
+const addMenu = document.querySelector(".add-menu");
 const addButton = document.getElementById("addButton");
 const addForm = document.getElementById("addForm");
+const formTitle = document.getElementById("formTitle");
 const titleInput = document.getElementById("titleInput");
 const typeSelect = document.getElementById("typeSelect");
+const statusSelect = document.getElementById("statusSelect");
+const ratingInput = document.getElementById("ratingInput");
+const saveButton = document.getElementById("saveButton");
+const cancelButton = document.getElementById("cancelButton");
 
 // random
 const randomButton = document.getElementById("randomButton");
+const randomAgainButton = document.getElementById("randomAgainButton");
+const randomOpenButton = document.getElementById("randomOpenButton");
 const randomResult = document.getElementById("randomResult");
+const randomMenu = document.querySelector(".random-menu");
+const randomCover = document.getElementById("randomCover");
+const randomTitle = document.getElementById("randomTitle");
+const randomTypeBadge = document.getElementById("randomTypeBadge");
+const randomStatusBadge = document.getElementById("randomStatusBadge");
+const randomRating = document.getElementById("randomRating");
+const randomType = document.getElementById("randomType");
+const randomStatus = document.getElementById("randomStatus");
 
 // collection
 const cardsContainer = document.getElementById("cardsContainer");
 const collectionCount = document.getElementById("collectionCount");
+
+// delete confirmation
+const deleteConfirmModal = document.getElementById("deleteConfirmModal");
+const deleteConfirmText = document.getElementById("deleteConfirmText");
+const cancelDeleteButton = document.getElementById("cancelDeleteButton");
+const confirmDeleteButton = document.getElementById("confirmDeleteButton");
+
+// navigation
+const navItems = document.querySelectorAll(".nav-item[data-page]");
+const pageTitleText = document.getElementById("pageTitleText");
+const pageSubtitle = document.getElementById("pageSubtitle");
+const pageTitleIcon = document.querySelector(".page-title-icon");
+const collectionTitle = document.getElementById("collectionTitle");
+const statsSection = document.querySelector(".stats");
 
 // filters
 const filterType = document.getElementById("filterType");
@@ -24,35 +157,26 @@ const searchInput = document.getElementById("searchInput");
 
 // stats
 const totalCount = document.getElementById("totalCount");
-
-const statusSelect = document.getElementById("statusSelect");
-const ratingInput = document.getElementById("ratingInput");
-const saveButton = document.getElementById("saveButton");
-const randomAgainButton = document.getElementById("randomAgainButton");
-const randomOpenButton = document.getElementById("randomOpenButton");
-const randomCover = document.getElementById("randomCover");
-const randomTitle = document.getElementById("randomTitle");
-const randomTypeBadge = document.getElementById("randomTypeBadge");
-const randomStatusBadge = document.getElementById("randomStatusBadge");
-const randomRating = document.getElementById("randomRating");
-const randomMenu = document.querySelector(".random-menu");
+const weeklyCount = document.getElementById("weeklyCount");
 const completedCount = document.getElementById("completedCount");
 const progressCount = document.getElementById("progressCount");
 const plannedCount = document.getElementById("plannedCount");
 const completedPercent = document.getElementById("completedPercent");
 const progressPercent = document.getElementById("progressPercent");
 const plannedPercent = document.getElementById("plannedPercent");
-const randomType = document.getElementById("randomType");
-const randomStatus = document.getElementById("randomStatus");
-const formTitle = document.getElementById("formTitle");
-const cancelButton = document.getElementById("cancelButton")
-const customSelectRegistry = new Map();
+const favoriteCount = document.getElementById("favoriteCount");
+const favoritePercent = document.getElementById("favoritePercent");
 
+// state
+const customSelectRegistry = new Map();
 let editingItemId = null;
 let searchTimer = null;
 let currentRandomItem = null;
 let randomLoading = false;
+let currentPage = "collection";
+let pendingDeleteItem = null;
 
+// custom select
 function renderCustomSelectContent(container, nativeOption) {
     container.replaceChildren();
 
@@ -93,15 +217,12 @@ function syncCustomSelect(select) {
         function(optionData) {
             const isSelected = optionData.nativeOption.selected;
 
-            optionData.addButton
-                .classList
-                .toggle(
+            optionData.button.classList.toggle(
                     "selected",
                     isSelected
                 );
 
-            optionData.addButton
-                .setAttribute(
+            optionData.button.setAttribute(
                     "aria-selected",
                     String(isSelected)
                 );
@@ -158,15 +279,15 @@ function initCustomSelect(select) {
     select.classList.add("custom-select-native");
     select.tabIndex = -1;
 
-    const addButton = document.createElement("addButton");
+    const button = document.createElement("button");
 
-    addButton.type = "addButton";
-    addButton.classList.add("custom-select-addButton");
-    addButton.setAttribute(
+    button.type = "button";
+    button.classList.add("custom-select-button");
+    button.setAttribute(
         "aria-haspopup",
         "listbox"
     );
-    addButton.setAttribute(
+    button.setAttribute(
         "aria-expanded",
         "false"
     );
@@ -177,8 +298,8 @@ function initCustomSelect(select) {
     const arrow = document.createElement("span");
     arrow.classList.add("custom-select-arrow");
 
-    addButton.appendChild(value);
-    addButton.appendChild(arrow);
+    button.appendChild(value);
+    button.appendChild(arrow);
 
     const menu = document.createElement("div");
     menu.classList.add("custom-select-menu");
@@ -191,8 +312,8 @@ function initCustomSelect(select) {
 
     Array.from(select.options).forEach(
         function(nativeOption) {
-            const optionButton = document.createElement("addButton");
-            optionButton.type = "addButton";
+            const optionButton = document.createElement("button");
+            optionButton.type = "button";
             optionButton.classList.add("custom-select-option");
             optionButton.setAttribute(
                 "role",
@@ -224,25 +345,25 @@ function initCustomSelect(select) {
                     );
                     closeCustomSelect(wrapper);
 
-                    addButton.focus();
+                    button.focus();
                 }
             );
             menu.appendChild(optionButton);
 
             optionDataList.push({
-                addButton: optionButton,
+                button: optionButton,
                 nativeOption: nativeOption
             });
         }
     );   
-    wrapper.appendChild(addButton);
+    wrapper.appendChild(button);
     wrapper.appendChild(menu);
 
     customSelectRegistry.set(
         select,
         {
             wrapper: wrapper,
-            addButton: addButton,
+            button: button,
             value: value,
             menu: menu,
             options: optionDataList
@@ -250,7 +371,7 @@ function initCustomSelect(select) {
     );
     syncCustomSelect(select);
 
-    addButton.addEventListener(
+    button.addEventListener(
         "click",
         function() {
             const shouldOpen = !wrapper.classList.contains("open");
@@ -260,7 +381,7 @@ function initCustomSelect(select) {
             if (shouldOpen) {
                 wrapper.classList.add("open");
 
-                addButton.setAttribute(
+                button.setAttribute(
                     "aria-expanded",
                     "true"
                 );
@@ -274,7 +395,7 @@ function initCustomSelect(select) {
                 if (selected) {
                     requestAnimationFrame(
                         function() {
-                            selected.addButton.focus();
+                            selected.button.focus();
                         }
                     );
                 }
@@ -291,12 +412,7 @@ function initCustomSelect(select) {
     );
 }
 
-document.querySelectorAll("select[data-custom-select]").forEach(
-    function(select) {
-        initCustomSelect(select);
-    }
-);
-
+// form
 function resetForm() {
     titleInput.value = "";
     setSelectValue(
@@ -313,43 +429,6 @@ function resetForm() {
 function closeForm() {
     addForm.style.display = "none";
     editingItemId = null;
-}
-
-function closeRandomResult() {
-    randomResult.style.display = "none";
-}
-
-cancelButton.addEventListener(
-    "click",
-    closeForm
-)
-
-function getTypeName(type) {
-    if (type === 'game') {
-        return "Игра";
-    }
-
-    if (type === 'movie') {
-        return "Фильм";
-    }
-
-    if (type === 'book') {
-        return "Книга";
-    }
-}
-
-function getStatusName(status) {
-    if (status === "planned") {
-        return "В планах";
-    }
-    if (status === "in_progress") {
-        return "В процессе";
-    }
-    if (status === "completed") {
-        return "Завершено";
-    }
-
-    return "Не указан"
 }
 
 function openAddForm() {
@@ -388,6 +467,7 @@ function openEditForm(item) {
     addForm.style.display = "flex";
 }
 
+// collection
 async function refreshCollection() {
     await loadItems();
     await loadStats();
@@ -416,12 +496,116 @@ function createCard(item) {
     topActions.classList.add("card-actions-top");
 
     const favoriteButton = document.createElement("button");
+    favoriteButton.type = "button";
     favoriteButton.classList.add("favorite-button");
-    favoriteButton.textContent = "♡";
+
+    const favoriteIcon = document.createElement("img");
+    favoriteIcon.classList.add("favorite-icon");
+    favoriteIcon.alt = "";
+
+    favoriteButton.appendChild(favoriteIcon);
+
+    updateFavoriteButton(favoriteButton, favoriteIcon, Boolean(item.favorite));
+
+    favoriteButton.addEventListener(
+        "click",
+        async function(event) {
+            event.stopPropagation();
+
+            const newFavorite = !Boolean(item.favorite);
+
+            favoriteButton.disabled = true;
+
+            try {
+                const response = await fetch(
+                    API_BASE_URL + "/items/" + item.id + "/favorite",
+                    {
+                        method: "PATCH",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({favorite: newFavorite})
+                    }
+                );
+
+                if (!response.ok) {
+                    alert("Не удалось изменить избранное");
+                    return;
+                }
+
+                const updatedItem = await response.json();
+
+                item.favorite = updatedItem.favorite;
+
+                updateFavoriteButton(favoriteButton, favoriteIcon, Boolean(item.favorite));
+
+                await loadStats();
+
+                if (currentPage === "favorites") {
+                    await loadItems(false);
+                }
+
+            } catch(error) {
+                console.error(error);
+                alert("Не удалось связаться с сервером");
+            } finally {
+                favoriteButton.disabled = false;
+            }
+        }
+    );
 
     const moreButton = document.createElement("button");
     moreButton.classList.add("more-button");
     moreButton.textContent = "⋮";
+    moreButton.type = "button";
+    moreButton.setAttribute("aria-label", "Действия");
+
+    const cardMenuWrapper = document.createElement("div");
+    cardMenuWrapper.classList.add("card-menu-wrapper");
+
+    const cardMenu = document.createElement("div");
+    cardMenu.classList.add("card-menu");
+
+    const menuEditButton = document.createElement("button");
+    menuEditButton.type = "button";
+    menuEditButton.classList.add("card-menu-item");
+    menuEditButton.textContent = "Редактировать";
+
+    const menuDeleteButton = document.createElement("button");
+    menuDeleteButton.type = "button";
+    menuDeleteButton.classList.add("card-menu-item", "delete");
+    menuDeleteButton.textContent = "Удалить";
+
+    cardMenu.appendChild(menuEditButton);
+    cardMenu.appendChild(menuDeleteButton);
+    cardMenuWrapper.appendChild(moreButton);
+    cardMenuWrapper.appendChild(cardMenu);
+
+    moreButton.addEventListener(
+        "click",
+        function(event) {
+            event.stopPropagation();
+            const shouldOpen = !cardMenu.classList.contains("open");
+            closeAllCardMenus(cardMenu);
+            cardMenu.classList.toggle("open", shouldOpen);
+        }
+    );
+
+    menuEditButton.addEventListener(
+        "click",
+        function(event) {
+            event.stopPropagation();
+            cardMenu.classList.remove("open");
+            openEditForm(item);
+        }
+    );
+
+    menuDeleteButton.addEventListener(
+        "click",
+        function(event) {
+            event.stopPropagation();
+            cardMenu.classList.remove("open");
+            openDeleteConfirm(item);
+        }
+    );
 
     const typeBadge = document.createElement("div");
     typeBadge.classList.add("type-badge", item.type);
@@ -447,53 +631,8 @@ function createCard(item) {
         ratingValue.textContent = "★ " + item.rating + " / 10"
     }
 
-    const editButton = document.createElement("button");
-    editButton.classList.add("edit-button");
-    editButton.textContent = "✎";
-
-    const deleteButton = document.createElement("button");
-    deleteButton.classList.add("delete-button")
-    deleteButton.textContent = "🗑";
-
-    editButton.addEventListener(
-        "click",
-        function(event) {
-            event.stopPropagation();
-
-            openEditForm(item);
-        }
-    );
-
-    deleteButton.addEventListener(
-        "click",
-        async function() {
-            try{
-                const response = await fetch(
-                    API_BASE_URL + "/items/" + item.id,
-                    {
-                        method: "DELETE"
-                    }
-                );
-
-                if (!response.ok) {
-                    alert("Не удалось удалить элемент");
-                    return;
-                }
-
-                await refreshCollection();
-
-            } catch(error) {
-                console.error(error);
-                alert("Не удалось связаться с сервером");
-            }
-        }
-    );
-
-    const cardFooter = document.createElement("div");
-    cardFooter.classList.add("card-footer");
-
     topActions.appendChild(favoriteButton);
-    topActions.appendChild(moreButton);
+    topActions.appendChild(cardMenuWrapper);
 
     cardHeader.appendChild(title);
     cardHeader.appendChild(topActions);
@@ -501,19 +640,26 @@ function createCard(item) {
     rating.appendChild(ratingLabel);
     rating.appendChild(ratingValue);
 
-    cardFooter.appendChild(editButton);
-    cardFooter.appendChild(deleteButton);
-
     cardInfo.appendChild(cardHeader);
     cardInfo.appendChild(typeBadge);
     cardInfo.appendChild(statusBadge);
     cardInfo.appendChild(rating);
-    cardInfo.appendChild(cardFooter);
 
     card.appendChild(cover);
     card.appendChild(cardInfo);
 
     cardsContainer.appendChild(card);
+}
+
+function showCardsMessage(text) {
+    cardsContainer.innerHTML = "";
+
+    const message = document.createElement("div");
+
+    message.classList.add("cards-message");
+    message.textContent = text;
+
+    cardsContainer.appendChild(message);
 }
 
 async function loadItems(
@@ -525,6 +671,10 @@ async function loadItems(
 
     const params = new URLSearchParams();
     const search = searchInput.value.trim();
+
+    if (currentPage === "favorites") {
+        params.append("favorite", "true");
+    }
 
     if (search !== "") {
         params.append(
@@ -572,8 +722,14 @@ async function loadItems(
 
         cardsContainer.innerHTML = "";
 
+        collectionCount.textContent = items.length;
+
         if (items.length === 0) {
-            showCardsMessage("Ничего не найдено");
+            if (currentPage === "favorites") {
+                showCardsMessage("В избранном ничего нет");
+            } else {
+                showCardsMessage("Ничего не найдено");
+            }
             return;
         }
 
@@ -588,8 +744,24 @@ async function loadItems(
     }
 }
 
+// stats
 function updateStats(items) {
     const total = items.length;
+
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    const weeklyItems = items.filter(
+        function(item) {
+            if (!item.created_at) {
+                return false;
+            }
+
+            const createdAt = new Date(item.created_at.replace(" ", "T") + "Z");
+            const createdAtMs = createdAt.getTime();
+            return(!Number.isNaN(createdAtMs) && createdAtMs >= sevenDaysAgo);
+
+        }
+    );
 
     const completedItems = items.filter(
         function(item) {
@@ -609,17 +781,25 @@ function updateStats(items) {
         }
     );
 
+    const favoriteItems = items.filter(
+        function(item) {
+            return Boolean(item.favorite);
+        }
+    );
+
     totalCount.textContent = total;
-    collectionCount.textContent = total;
+    weeklyCount.textContent = "+" + weeklyItems.length + " за неделю";
 
     completedCount.textContent = completedItems.length;
     progressCount.textContent = progressItems.length;
     plannedCount.textContent = plannedItems.length;
+    favoriteCount.textContent = favoriteItems.length;
 
     if (total === 0) {
         completedPercent.textContent = "0% коллекции";
         progressPercent.textContent = "0% коллекции";
         plannedPercent.textContent = "0% коллекции";
+        favoritePercent.textContent = "0% коллекции";
 
         return;
     }
@@ -627,10 +807,12 @@ function updateStats(items) {
     const completedPercentage = Math.round(completedItems.length / total * 100);
     const progressPercentage = Math.round(progressItems.length / total * 100);
     const plannedPercentage = Math.round(plannedItems.length / total * 100);
+    const favoritePercentage = Math.round(favoriteItems.length / total * 100);
 
     completedPercent.textContent = completedPercentage + "% коллекции";
     progressPercent.textContent = progressPercentage + "% коллекции";
     plannedPercent.textContent = plannedPercentage + "% коллекции";
+    favoritePercent.textContent = favoritePercentage + "% коллекции";
 }
 
 async function loadStats() {
@@ -650,152 +832,10 @@ async function loadStats() {
     } 
 }
 
-function showCardsMessage(text) {
-    cardsContainer.innerHTML = "";
-
-    const message = document.createElement("div");
-
-    message.classList.add("cards-message");
-    message.textContent = text;
-
-    cardsContainer.appendChild(message);
+// random pick
+function closeRandomResult() {
+    randomResult.style.display = "none";
 }
-
-filterType.addEventListener(
-    "change",
-    function() {
-        loadItems();
-    }
-);
-
-filterStatus.addEventListener(
-    "change",
-    function() {
-        loadItems();
-    }
-);
-
-sortSelect.addEventListener(
-    "change",
-    function() {
-        loadItems();
-    }
-);
-
-searchInput.addEventListener(
-    "input",
-    function() {
-        clearTimeout(searchTimer);
-
-        searchTimer = setTimeout(
-            function() {
-                loadItems();
-            },
-            400
-        );
-    }
-);
-
-addButton.addEventListener(
-    "click", 
-    function() {
-        closeRandomResult();
-        openAddForm();
-    }
-);
-
-saveButton.addEventListener(
-    'click',
-    async function() {
-        const title = titleInput.value.trim();
-        const type = typeSelect.value;
-        const status = statusSelect.value;
-        const ratingValue = ratingInput.value;
-
-        if (title === "") {
-            alert("Введите название");
-            return;
-        }
-
-        let rating = null;
-        if (ratingValue !== "") {
-            rating = Number(ratingValue);
-        }
-        if (rating !== null) {
-            if (rating < 1 || rating > 10) {
-                alert("Оценка должна быть от 1 до 10");
-                return;
-            }
-        }
-
-        const item = {
-            title: title,
-            type: type,
-            status: status,
-            rating: rating
-        };
-
-        let url = API_BASE_URL + "/items";
-        let method = "POST"
-
-        if (editingItemId !== null) {
-            url = API_BASE_URL + "/items/" + editingItemId;
-            method = "PUT"
-        }
-
-        try {
-            const response = await fetch(
-                url,
-                {
-                    method: method,
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(item)
-                }
-            );
-
-            if (!response.ok) {
-                alert("Не удалось сохранить");
-                return;
-            }
-
-            resetForm();
-            closeForm();
-
-            saveButton.textContent = "Сохранить";
-
-            await refreshCollection();
-
-        }catch(error) {
-            console.error(error);
-            alert("Не удалось связаться с сервером");
-        }
-    } 
-);
-
-document.addEventListener(
-    "click",
-    function(event) {
-        const clickedInsideForm = addForm.contains(event.target);
-        const clickedAddButton = addButton.contains(event.target);
-
-        if (!clickedInsideForm && !clickedAddButton) {
-            closeForm();
-        }
-    }
-);
-
-document.addEventListener(
-    "keydown",
-    function(event) {
-        if (event.key === "Escape") {
-            closeForm();
-            closeRandomResult();
-            closeAllCustomSelects();
-        }
-    }
-);
 
 async function loadRandomItem() {
     if (randomLoading) {
@@ -872,6 +912,197 @@ async function loadRandomItem() {
     }
 }
 
+// =====
+// events
+// =====
+
+// navigation
+navItems.forEach(
+    function(navItem) {
+        navItem.addEventListener(
+            "click",
+            function() {
+                const page = navItem.dataset.page;
+
+                if (page !== "collection" && page !== "favorites") {
+                    return;
+                }
+                openPage(page);
+            }
+        );
+    }
+);
+
+//filters
+filterType.addEventListener(
+    "change",
+    function() {
+        loadItems();
+    }
+);
+
+filterStatus.addEventListener(
+    "change",
+    function() {
+        loadItems();
+    }
+);
+
+sortSelect.addEventListener(
+    "change",
+    function() {
+        loadItems();
+    }
+);
+
+searchInput.addEventListener(
+    "input",
+    function() {
+        clearTimeout(searchTimer);
+
+        searchTimer = setTimeout(
+            function() {
+                loadItems();
+            },
+            400
+        );
+    }
+);
+
+//form
+addButton.addEventListener(
+    "click", 
+    function() {
+        closeRandomResult();
+        openAddForm();
+    }
+);
+
+cancelButton.addEventListener(
+    "click",
+    closeForm
+)
+
+saveButton.addEventListener(
+    'click',
+    async function() {
+        const title = titleInput.value.trim();
+        const type = typeSelect.value;
+        const status = statusSelect.value;
+        const ratingValue = ratingInput.value;
+
+        if (title === "") {
+            alert("Введите название");
+            return;
+        }
+
+        let rating = null;
+        if (ratingValue !== "") {
+            rating = Number(ratingValue);
+        }
+        if (rating !== null) {
+            if (rating < 1 || rating > 10) {
+                alert("Оценка должна быть от 1 до 10");
+                return;
+            }
+        }
+
+        const item = {
+            title: title,
+            type: type,
+            status: status,
+            rating: rating
+        };
+
+        let url = API_BASE_URL + "/items";
+        let method = "POST"
+
+        if (editingItemId !== null) {
+            url = API_BASE_URL + "/items/" + editingItemId;
+            method = "PUT"
+        }
+
+        try {
+            const response = await fetch(
+                url,
+                {
+                    method: method,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(item)
+                }
+            );
+
+            if (!response.ok) {
+                alert("Не удалось сохранить");
+                return;
+            }
+
+            resetForm();
+            closeForm();
+
+            saveButton.textContent = "Сохранить";
+
+            await refreshCollection();
+
+        }catch(error) {
+            console.error(error);
+            alert("Не удалось связаться с сервером");
+        }
+    } 
+);
+
+// delete confirmation
+cancelDeleteButton.addEventListener(
+    "click",
+    closeDeleteConfirm
+);
+
+confirmDeleteButton.addEventListener(
+    "click",
+    async function() {
+        if (pendingDeleteItem === null) {
+            return;
+        }
+
+        const itemId = pendingDeleteItem.id;
+        confirmDeleteButton.disabled = true;
+
+        try {
+            const response = await fetch(
+                API_BASE_URL + "/items/" + itemId,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            if (!response.ok) {
+                alert("Не удалось удалить элемент");
+                return;
+            }
+
+            closeDeleteConfirm();
+            await refreshCollection();
+        } catch(error) {
+            console.error(error);
+            alert("Не удалось связаться с сервером");
+        } finally {
+            confirmDeleteButton.disabled = false;
+        }
+    }
+);
+
+deleteConfirmModal.addEventListener(
+    "click",
+    function(event) {
+        if (event.target === deleteConfirmModal) {
+            closeDeleteConfirm();
+        }
+    }
+);
+
+// random
 randomButton.addEventListener(
     "click",
     function() {
@@ -934,6 +1165,32 @@ randomOpenButton.addEventListener(
     }
 );
 
+// global
+document.addEventListener(
+    "click",
+    function(event) {
+        const clickedInsideForm = addForm.contains(event.target);
+        const clickedAddButton = addButton.contains(event.target);
+
+        if (!clickedInsideForm && !clickedAddButton) {
+            closeForm();
+        }
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+        if (event.key === "Escape") {
+            closeForm();
+            closeRandomResult();
+            closeAllCustomSelects();
+            closeDeleteConfirm();
+            closeAllCardMenus();
+        }
+    }
+);
+
 document.addEventListener(
     "pointerdown",
     function(event) {
@@ -963,5 +1220,21 @@ document.addEventListener(
     }
 );
 
-loadItems();
+document.addEventListener(
+    "click",
+    function(event) {
+        if (!event.target.closest(".card-menu-wrapper")) {
+            closeAllCardMenus();
+        }
+    }
+);
+
+// init
+document.querySelectorAll("select[data-custom-select]").forEach(
+    function(select) {
+        initCustomSelect(select);
+    }
+);
+
+openPage("collection");
 loadStats();
